@@ -1,0 +1,35 @@
+variables:
+  DOCKERFILE: "Dockerfile"
+  CONTEXT: "."
+
+include:
+  - component: $CI_SERVER_FQDN/ci-catalog/common-pipelines/common-pipeline@1.0.1-rc14
+    inputs:
+      # ─────────── GitOps settings ───────────
+      gitops_repo_project: "gitops/tqa.git"
+      gitops_repo_app_dir: "it-nl-k8s-test-env/manifests"
+      gitops_repo_argo_dir: "it-nl-k8s-test-env/argocd"
+      gitops_repo_push: "true"
+      gitops_argo_force: "true"
+      gitops_argo_flags: >
+        --set application.argocd_namespace=kube-argocd
+      # ─────────── Helmfile settings ───────────
+      helmfile_path: "helmfile.yaml"
+      app_int_stands: ["uat"]
+      enable_int_stands: "true"
+
+      # ───────── Docker image settings ─────────
+      target_docker_group: "docker/tqa/km"
+      target_docker_path: "clapp-backend"
+
+      # ───────── Build arguments ─────────
+      build_args: "--dockerfile=Dockerfile --context=. --target=builder"
+
+      # ───────── Optional quality gates ─────────
+      enable_hadolint: "true"
+
+      # ───────── Disable unused stages ─────────
+      enable_linters: "false"
+      enable_tests: "false"
+      enable_dev_stands: "false"
+      enable_test_stands: "false"

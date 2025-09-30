@@ -1,0 +1,38 @@
+repositories: []
+
+helmDefaults:
+  timeout: 300
+  wait: true
+  atomic: true
+  createNamespace: false
+  insecureSkipTLSVerify: true
+
+environments:
+  uat:
+    values:
+      - cluster:
+          name: it-nl-k8s-test-env
+          kubeVersion: v1.28.6
+      - helmfile:
+          app_name: clapp-backend
+          namespace: retail-clapp-uat
+          values_file: values/values-uat.yaml
+          chart_version: "0.7.4-uat"
+      - appsEnabled:
+          clappbackend: true
+      - project:
+          name: tqa-team
+          argocd_namespace: kube-argocd
+
+---
+kubeVersion: {{.Values.cluster.kubeVersion}}
+
+releases:
+  - name: {{.Values.helmfile.app_name}}
+    installed: {{.Values.appsEnabled.clappbackend}}
+    chart: "https://artifactory.exness.io/artifactory/helm-tqa/{{ .Values.helmfile.app_name }}-{{ .Values.helmfile.chart_version }}.tgz"
+    version: {{.Values.helmfile.chart_version}}
+    namespace: {{.Values.helmfile.namespace}}
+    forceNamespace: {{.Values.helmfile.namespace}}
+    values:
+      - {{.Values.helmfile.values_file}}

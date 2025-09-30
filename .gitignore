@@ -1,0 +1,10 @@
+.venv/
+node_modules/
+__pycache__/
+frontend/build/
+.pip
+.DS_Store
+vault_config.py
+.pre-commit-config.yaml
+.pyflyby
+pyproject.toml

@@ -1,0 +1,7 @@
+trustedRegistries:
+  - "artifactory.exness.io"
+
+ignored:
+  - DL3008 # Pin versions in apk add (not enforced for now)
+  - DL3013 # Pin versions in pip install/npm install (not enforced for now)
+  - DL4006 # Use `apk add --no-cache` (ignored due to false positives)

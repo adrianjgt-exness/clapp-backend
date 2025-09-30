@@ -1,0 +1,122 @@
+environment: uat
+replicaCount: 1
+
+podAnnotations:
+  sidecar.istio.io/proxyCPU: "25m"
+  sidecar.istio.io/proxyCPULimit: "50m"
+  sidecar.istio.io/proxyMemory: "64Mi"
+  sidecar.istio.io/proxyMemoryLimit: "128Mi"
+  vault.security.banzaicloud.io/vault-addr: "https://vault.test.env:8200"
+  vault.security.banzaicloud.io/vault-auth-method: kubernetes_it-nl-k8s-test-env
+  vault.security.banzaicloud.io/vault-path: kubernetes_it-nl-k8s-test-env
+  vault.security.banzaicloud.io/vault-role: tqa-clapp-backend-uat
+  vault.security.banzaicloud.io/vault-serviceaccount: clapp-backend-uat-ro
+  vault.security.banzaicloud.io/vault-skip-verify: "true"
+
+resources:
+  requests:
+    cpu: 300m
+    memory: 384Mi
+  limits:
+    cpu: 600m
+    memory: 768Mi
+
+service:
+  enabled: true
+  type: ClusterIP
+  targetPort: 8000
+  port: 8000
+
+virtualService:
+  enabled: true
+  gateway: kube-istio-gateway/internal-default
+
+serviceAccount:
+  enabled: true
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 10001
+  runAsNonRoot: true
+  runAsUser: 10001
+
+env:
+  - name: LOGGING_LEVEL
+    value: "DEBUG"
+  - name: MONGO_HOSTS
+    value: vault:tqa/data/clapp/uat/backend#MONGO_HOSTS
+  - name: MONGO_PASS
+    value: vault:tqa/data/clapp/uat/backend#MONGO_PASS_RW
+  - name: MONGO_USER_RW
+    value: vault:tqa/data/clapp/uat/backend#MONGO_USER_RW
+  - name: SENTINEL_HOST
+    value: vault:tqa/data/clapp/uat/backend/nl/paas-redis/sentinel#host
+  - name: SENTINEL_PORT
+    value: vault:tqa/data/clapp/uat/backend/nl/paas-redis/sentinel#port
+  - name: SENTINEL_PASSWORD
+    value: vault:tqa/data/clapp/uat/backend/nl/paas-redis/sentinel#password
+  - name: SENTINEL_USER
+    value: vault:tqa/data/clapp/uat/backend/nl/paas-redis/sentinel#username
+  - name: REDIS_USER
+    value: vault:tqa/data/clapp/uat/backend/nl/paas-redis/user#username
+  - name: REDIS_PASSWORD
+    value: vault:tqa/data/clapp/uat/backend/nl/paas-redis/user#password
+  - name: CA_CERT_B64
+    value: vault:tqa/data/clapp/uat/backend/nl/paas-redis/sentinel#ca_crt_base64
+  - name: CLIENT_CERT_B64
+    value: vault:tqa/data/clapp/uat/backend/nl/paas-redis/sentinel#client_crt_base64
+  - name: CLIENT_KEY_B64
+    value: vault:tqa/data/clapp/uat/backend/nl/paas-redis/sentinel#client_key_base64
+  - name: JIRA_BASE_URL
+    value: vault:tqa/data/clapp/uat/backend#JIRA_BASE_URL
+  - name: JIRA_USER
+    value: vault:tqa/data/clapp/uat/backend#CONFLUENCE_USERNAME
+  - name: JIRA_USER_PASSWORD
+    value: vault:tqa/data/clapp/uat/backend#CONFLUENCE_PASSWORD
+  - name: GOOGLE_DRIVE_FOLDER_ID
+    value: vault:tqa/data/clapp/uat/backend#GOOGLE_DRIVE_FOLDER_ID
+  - name: GOOGLE_CREDENTIALS_JSON
+    value: vault:tqa/data/clapp/uat/backend#GOOGLE_CREDENTIALS_JSON
+  - name: SENTRY_DSN
+    value: vault:tqa/data/clapp/uat/backend#SENTRY_DSN
+  - name: OKTA_CLIENT_ID
+    value: vault:tqa/data/clapp/uat/backend#OKTA_CLIENT_ID
+  - name: OKTA_CLIENT_SECRET
+    value: vault:tqa/data/clapp/uat/backend#OKTA_CLIENT_SECRET
+  - name: OKTA_DOMAIN
+    value: vault:tqa/data/clapp/uat/backend#OKTA_DOMAIN
+  - name: OKTA_CLIENT_ID_DEV
+    value: vault:tqa/data/clapp/uat/backend#OKTA_CLIENT_ID_DEV
+  - name: OKTA_CLIENT_SECRET_DEV
+    value: vault:tqa/data/clapp/uat/backend#OKTA_CLIENT_SECRET_DEV
+  - name: OKTA_DOMAIN_DEV
+    value: vault:tqa/data/clapp/uat/backend#OKTA_DOMAIN_DEV
+  - name: SESSION_SECRET_KEY
+    value: vault:tqa/data/clapp/uat/backend#SESSION_SECRET_KEY
+  - name: HR_MEDIUM_API_KEY
+    value: vault:tqa/data/clapp/uat/backend#HR_MEDIUM_API_KEY
+  - name: CF_ACCOUNT_ID
+    value: vault:tqa/data/clapp/uat/backend#CF_ACCOUNT_ID
+  - name: CF_API_TOKEN
+    value: vault:tqa/data/clapp/uat/backend#CF_API_TOKEN
+  - name: CF_IMAGES_ACCOUNT_HASH
+    value: vault:tqa/data/clapp/uat/backend#CF_IMAGES_ACCOUNT_HASH
+  - name: CF_STREAM_CUSTOMER_CODE
+    value: vault:tqa/data/clapp/uat/backend#CF_STREAM_CUSTOMER_CODE
+  - name: CF_STREAM_SIGNING_KEY_ID
+    value: vault:tqa/data/clapp/uat/backend#CF_STREAM_SIGNING_KEY_ID
+  - name: CF_STREAM_PRIVATE_KEY_PEM_B64
+    value: vault:tqa/data/clapp/uat/backend#CF_STREAM_PRIVATE_KEY_PEM_B64
+
+volumeMounts:
+  - name: temp-storage
+    mountPath: /tmp
+
+volumes:
+  - name: temp-storage
+    emptyDir: {}
