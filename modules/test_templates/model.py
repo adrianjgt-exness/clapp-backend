@@ -129,11 +129,27 @@ class Unlockers(BaseModel):
     drop_dimension: dict[str, Unlocker] = Field(default_factory=dict)
 
 
+class PlanAction(BaseModel):
+    """A single actionable change surfaced to the UI."""
+
+    kind: str
+    label: str
+    dimension: str | None = None
+    value: str | None = None
+    delta: int | None = None
+    priority: int | None = None
+    will_resolve: bool | None = None
+    selected_total_after: int | None = None
+    missing_total_after: int | None = None
+    diagnostics: dict[str, Any] = Field(default_factory=dict)
+
+
 class FallbackPlan(BaseModel):
-    type: str = "mirror_selected"
-    guaranteed: bool = True
-    new_total: int = 0
-    new_quotas: PlanDelta = Field(default_factory=PlanDelta)
+    type: str = "adjust_filters"
+    guaranteed: bool = False
+    new_total: int | None = None
+    new_quotas: PlanDelta | None = None
+    actions: list[PlanAction] = Field(default_factory=list)
 
 
 class SuggestedPlan(BaseModel):

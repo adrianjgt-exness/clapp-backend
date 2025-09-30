@@ -719,32 +719,8 @@ class TestTemplateService:
                 "missing_total_after": max(0, total_needed - sel_after),
             }
 
-        # ---------- guaranteed fallback & unlockers ----------
-        fallback_plan = {
-            "type": "mirror_selected",
-            "guaranteed": True,
-            "new_total": selected_total,
-            "new_quotas": {
-                "domains": {
-                    k: int(v.get("selected", 0))
-                    for k, v in (quotas.get("domains") or {}).items()
-                },
-                "question_types": {
-                    k: int(v.get("selected", 0))
-                    for k, v in (quotas.get("question_types") or {}).items()
-                },
-                "sources": {
-                    k: int(v.get("selected", 0))
-                    for k, v in (quotas.get("sources") or {}).items()
-                },
-                "impact_levels": {
-                    k: int(v.get("selected", 0))
-                    for k, v in (quotas.get("impact_levels") or {}).items()
-                },
-            },
-        }
-
-        unlockers = {}
+        # ---------- unlockers & actionable fallback ----------
+        unlockers: dict[str, Any] = {}
 
         def strict_select_on(cands, qt, qd, qs, qi):
             selected_ids: set[str] = set()
@@ -854,6 +830,124 @@ class TestTemplateService:
             "selected_total_after": sel7,
         }
         unlockers["drop_dimension"] = drop_map
+
+        # actionable fallback suggestions respecting filter priority
+        actions: list[dict[str, Any]] = []
+
+        def _add_action(payload: dict[str, Any]) -> None:
+            payload["priority"] = len(actions) + 1
+            actions.append(payload)
+
+        def _label_topics(topics: list[str]) -> str:
+            if not topics:
+                return ""
+            trimmed = topics[:3]
+            label = ", ".join(trimmed)
+            if len(topics) > 3:
+                label += ", …"
+            return label
+
+        if selected_topic:
+            topic_unlock = unlockers.get("topics_all") or {}
+            after = topic_unlock.get("selected_total_after")
+            _add_action(
+                {
+                    "kind": "expand_topics",
+                    "label": "Allow all topics or add more topics",
+                    "dimension": "topic",
+                    "value": "All",
+                    "will_resolve": bool(topic_unlock.get("will_resolve")),
+                    "selected_total_after": after,
+                    "missing_total_after": (
+                        max(0, total_needed - int(after)) if after is not None else None
+                    ),
+                    "diagnostics": {
+                        "currently_selected": selected_topic,
+                        "preview_label": _label_topics(selected_topic),
+                    },
+                }
+            )
+
+        if selected_author and selected_author != "All":
+            author_unlock = unlockers.get("author_all") or {}
+            after = author_unlock.get("selected_total_after")
+            _add_action(
+                {
+                    "kind": "expand_author",
+                    "label": "Allow questions from any author",
+                    "dimension": "author",
+                    "value": "All",
+                    "will_resolve": bool(author_unlock.get("will_resolve")),
+                    "selected_total_after": after,
+                    "missing_total_after": (
+                        max(0, total_needed - int(after)) if after is not None else None
+                    ),
+                    "diagnostics": {"currently_selected": selected_author},
+                }
+            )
+
+        deficits_now = deficits_from(quotas)
+        human_names = {
+            "domains": "Domains",
+            "question_types": "Question types",
+            "sources": "Sources",
+            "impact_levels": "Impact levels",
+        }
+
+        for cat in ["domains", "question_types", "sources", "impact_levels"]:
+            for val, shortfall in (deficits_now.get(cat) or {}).items():
+                cell = (quotas.get(cat) or {}).get(val, {})
+                label_val = val or "Unspecified"
+                _add_action(
+                    {
+                        "kind": "adjust_quota",
+                        "label": (
+                            f"Lower {human_names[cat]} '{label_val}' quota by {shortfall}"
+                        ),
+                        "dimension": cat,
+                        "value": val,
+                        "delta": -int(shortfall),
+                        "will_resolve": None,
+                        "selected_total_after": None,
+                        "missing_total_after": max(0, missing_total - int(shortfall)),
+                        "diagnostics": {
+                            "requested": cell.get("requested"),
+                            "available": cell.get("available"),
+                            "selected": cell.get("selected"),
+                            "shortfall": cell.get("shortfall"),
+                        },
+                    }
+                )
+
+        drop_unlocks = unlockers.get("drop_dimension") or {}
+        for cat in ["domains", "question_types", "sources", "impact_levels"]:
+            info = drop_unlocks.get(cat) or {}
+            if not info:
+                continue
+            after = info.get("selected_total_after")
+            _add_action(
+                {
+                    "kind": "drop_dimension",
+                    "label": f"Ignore {human_names[cat]} quotas",
+                    "dimension": cat,
+                    "value": None,
+                    "delta": None,
+                    "will_resolve": bool(info.get("will_resolve")),
+                    "selected_total_after": after,
+                    "missing_total_after": (
+                        max(0, total_needed - int(after)) if after is not None else None
+                    ),
+                    "diagnostics": {},
+                }
+            )
+
+        fallback_plan = {
+            "type": "adjust_filters",
+            "guaranteed": any(a.get("will_resolve") for a in actions),
+            "new_total": None,
+            "new_quotas": None,
+            "actions": actions,
+        }
 
         result = {
             "feasible": feasible,
